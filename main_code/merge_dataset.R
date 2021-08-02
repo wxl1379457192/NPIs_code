@@ -3,19 +3,21 @@ merge_dataset <-
            Policy_P1,
            POPDATA,
            IND_DATA,
-           ENV_DATA,
-           wave1delay=12,
-           wave2delay=10
-  ) {
+           ENV_DATA) 
+    {
 
     source('smooth_Gaussian.R')
     source('plot_code/waveplot.R')
     source('select_2020data.R')
+    source('delay_report.R')
     ############# read epidemic and policy data ################
-    D1 <- read.csv(COVID_D1, stringsAsFactors = FALSE)
+    ##########ilness-onset delay######
+    D1 <- Reported_delay(COVID_D1,Policy_P1)
+    #write.csv( D1 ,file="dataset/COVID_delay_0722.csv",row.names = F)
     P1 <- read.csv(Policy_P1, stringsAsFactors = FALSE)
     #D1<-read.csv(url(COVID_D1))
     #P1<-read.csv(url(Policy_P1))
+    #D1<-read.csv("Dataset/COVID_data_delay0622.csv",stringsAsFactors = FALSE)
     ############# only consider nation-level data ################
     P1$RegionName <- as.character(P1$RegionName)
     P1 <- subset(P1, P1$RegionName == "")
@@ -32,35 +34,37 @@ merge_dataset <-
     )
     
     ############# restructure epidemic data into [iso_code  continent  location  date  new_cases  new_deaths] ################
-    D1 <- D1[, c(1, 2, 3, 4, 6, 9, 36,41)]
+    D1 <- D1[, c(1, 2, 3, 4, 6, 9, 36,41,61)]
     D1$date <- as.Date(D1$date)
     colnames(D1) <-
       c("CountryCode",
         "Continent",
         "CountryName",
         "Date",
-        "New_cases",
+        "New_cases_report",
         "New_deaths",
         "Vaccinations",
-        "Vaccinations_preHur"
+        "Vaccinations_preHur",
+        "New_cases"
       )
     D1[is.na(D1)]<-0
     ########vaccian data#######
     V<-D1[,c(1,2,3,4,7,8)]
-    #D1$Date <- D1$Date - 12 # adjust infection-to-confirmation delay
     ############## waves ############
     D1<-D1[,-c(7,8)]
-    wave_data<-read.csv("dataset/WaveTime2_0325.csv",stringsAsFactors = FALSE)
+    wave_data<-read.csv("dataset/WaveTime2_0624.csv",stringsAsFactors = FALSE)
     wave_data$Start<-as.Date(wave_data$Start)-7
     wave_data$End<-as.Date(wave_data$End)
     D1_list<-lapply(split(D1,D1$CountryName),function(v){
+      v<-v[order(as.Date(v$Date)),]
+      v$New_cases_cum <- cumsum(v$New_cases_report)
       wavetime<-wave_data[which(wave_data$Country==v$CountryName[1]),]
       v$wave<-0
       v$New_cases_smoothed <- 0
       if(nrow(wavetime)>0){
         temp <- smooth_Gaussian(v$New_cases)
         temp[which(temp<0)] <- 0
-        v$New_cases_smoothed[8:(length(v$New_cases_smoothed)-7)] <- rollmean(temp,7)
+        v$New_cases_smoothed[1:(length(v$New_cases_smoothed)-6)] <- rollmean(temp,7)
         for(i in 1:nrow(wavetime)){
           if(i==1){ start<-1
           }else{start<-which(v$Date==wavetime$Start[i])}
@@ -77,11 +81,9 @@ merge_dataset <-
           }else{wave1<-wave1[c(1:nrow(wave1)),]}
         }
         v<-do.call(rbind,list(wave1,subset(v,v$wave>1)))
-
           ################
         #return(v)
         }})
-
     D1<-do.call(rbind,D1_list)
     starttime<-lapply(split(D1,D1$CountryName),FUN=function(v){
       d<-v[which(v$wave==1)[1],c("Date","CountryName")]
@@ -90,19 +92,12 @@ merge_dataset <-
     ss<-do.call(rbind,starttime)
     write.csv(ss,file = "dataset/wave1_start.csv",row.names = F)
     #########plot wave######################################
-    #waveplot(D1,wave_data)
-    ##########ilness-onset delay######
-    D1$Date1<-D1$Date
-    D1$Date1[which(D1$wave==1)]<-D1$Date[which(D1$wave==1)]-wave1delay
-    D1$Date1[which(D1$wave>1)]<-D1$Date[which(D1$wave>1)]-wave2delay
-    #######sensitive analysis#######
-    #D1$Date1[which(D1$wave==1)]<-D1$Date[which(D1$wave==1)]-14
-    #D1$Date1[which(D1$wave>1)]<-D1$Date[which(D1$wave>1)]-12
+    waveplot(D1,wave_data)
+    ############################################
+    colnames(D1)<-c("CountryCode", "Continent", "CountryName",
+                    "Date", "New_cases_report", "New_deaths",
+                    "New_cases","New_cases_cum","wave","New_cases_smoothed")
     ##############################
-    D1$Date1[which(D1$Date1==D1$Date)]<-NA
-    D1<-D1[complete.cases(D1),]
-    D1<-D1[,-4]
-    colnames(D1)<-c("CountryCode", "Continent", "CountryName", "New_cases", "New_deaths","wave","New_cases_smoothed", "Date")
     ############# restructure policy data into [CountryName  CountryCode  Date  9 + 3 index policies] ################
     P1 <- P1[, c(1, 2, 6, 7, 9, 11, 13, 15, 17, 19, 21, 33)]
     P1$Date <- as.character(P1$Date)
@@ -156,6 +151,7 @@ merge_dataset <-
         m$C1_School.closing<-ifelse(m$C1_School.closing==0,ifelse(m$Holiday>0,1,0),m$C1_School.closing)
         #m<-m[,-1]
         M1[[i]] <- m
+
       }
       else{
         print(paste0("Country ", Con_list[i], " have some data missing"))

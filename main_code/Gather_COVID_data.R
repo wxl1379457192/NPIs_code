@@ -15,7 +15,7 @@ library(bayesplot)
 library(ggplot2)
 library(ggsci)
 library(reshape2)
-
+setwd("E://code_lastest")
 #COVID_D1<-"https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"#疫情数据
 #Policy_P1<-"https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/OxCGRT_latest.csv"#政策数据
 COVID_D1<-"I:/COVID19/test/数据合并/owid-covid-data.csv"

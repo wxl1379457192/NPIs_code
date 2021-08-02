@@ -27,8 +27,10 @@ strata_data<-function (Dataset){
     scale_color_manual(values=c("#ffdb47","#8da636","#1581c7","#a52a2a"))+ ylab("Fatality (per 0.1 million)") +
     geom_hline(yintercept = 40, color="#b22222") + geom_line(data = data.frame(x=c(1800,1800), y=c(-Inf,40)), aes(x,y), color="#b22222")+
     theme(legend.position = "right",legend.text =element_text(size=10,family="T"),
-          axis.text = element_text(size=10,family="T"),axis.title=element_text(hjust = 0.5, vjust=0.2,size = 12,family ="T",face="bold"),
-            panel.border = element_rect(fill=NA,color=NA))
-  ggsave(sprintf("picture/Countries starta.png"),g,width=10,height=8)
+          
+          axis.text = element_text(size=10,family="T"),
+          axis.title=element_text(hjust = 0.5, vjust=0.2,size = 12,family ="T",face="bold"),
+          panel.border = element_rect(fill=NA,color=NA))
+  ggsave("picture/Countries starta.pdf",g,width=140,height=100,units="mm",device = cairo_pdf)
   return(countries)
 }

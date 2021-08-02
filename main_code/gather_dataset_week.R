@@ -21,7 +21,7 @@ gather_dataset <- function (Dataset, strata,N) {
                            Restrictions.on.internalmovement = numeric(1), International.travel.controls = numeric(1), Facial.Coverings = numeric(1),
                            Pop = numeric(1), HealthIndex = numeric(1), PopDensity = numeric(1), Aging = numeric(1),
                            Humdity = numeric(1), AirTemp = numeric(1), New_cases = numeric(1), New_deaths = numeric(1),
-                           New_cases_smoothed = numeric(1))
+                           New_cases_smoothed = numeric(1),New_cases_cum = numeric(1),Vacc=numeric(1))
           df$Start <- r$Date[1]
           df$Week <- k
           df$Wave <- r$wave[1]
@@ -58,13 +58,20 @@ gather_dataset <- function (Dataset, strata,N) {
           df$New_cases <- sum(r$New_cases)
           df$New_deaths <- sum(r$New_deaths)
           df$New_cases_smoothed <- sum(r$New_cases_smoothed)
-          #df$NewCase_perMil<-df$New_cases/df$Pop*1000000
+          df$New_cases_cum<- max(r$New_cases_cum)
+          df$Vacc<-max(r$Vaccinations_preHur)
+          #df$NewCase_perHun<-df$New_cases/df$Pop*100
           m[[k]] <- df
         }
       }
       g[[w]]<-do.call(rbind, m)
     }
     gather_data <-do.call(rbind, g)
+    for (l in 1:nrow(gather_data)){
+      if (length(gather_data$New_cases[l-1])>0){
+        gather_data$Natural.immunities[l]<-gather_data$New_cases_cum[l-1]/gather_data$Pop[1]
+      }else{gather_data$Natural.immunities[l]<-0
+    }}
     print(paste0(strata$CountryName[i], " wave number is ", max(gather_data$Wave)))
     gather_data$Y1 <- 0
     gather_data<-do.call(rbind,lapply(split(gather_data,gather_data$Wave),
@@ -75,8 +82,8 @@ gather_dataset <- function (Dataset, strata,N) {
                                         v$Y1[which(is.infinite(v$Y1))] <- 0
                                         v$Y1[which(is.nan(v$Y1))] <- 0
                                         v$Y1[which(v$Y1<0)] <- 0
-                                        Y0_forW<-sort(v$Y1,decreasing=T)[1:N]
-                                        Y0<-sum(Y0_forW)/length(which(is.na(Y0_forW)==F))
+                                        Y0_forW<-sort(v$Y1[which(v$Y1<10&v$Y1>1)],decreasing=T)[1:N]
+                                        Y0<-sum(Y0_forW[which(is.na(Y0_forW)==F)])/length(which(is.na(Y0_forW)==F))
                                         v$Y0 <- Y0
                                         v$Y2 <- v$Y1/v$Y0
                                         v<-v[-1,]
@@ -84,7 +91,6 @@ gather_dataset <- function (Dataset, strata,N) {
                                       return(v)}))
     Y0_all<-mean(unique(gather_data$Y0))
     gather_data$Y0_all <- Y0_all
-    gather_data$Y2_all <- gather_data$Y1/gather_data$Y0_all
     CB[[i]] <- gather_data
   }
   CBD <- do.call(rbind, CB)
