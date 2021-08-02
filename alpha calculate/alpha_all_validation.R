@@ -22,8 +22,8 @@ alpha_all_validation<-function(gatherdata,m,outputpath,validationdata,Y0NAME){
   Y0_new<-as.vector(validationdata[,Y0NAME])
   Y1_new<-as.vector(validationdata$Y1)
   dataset<- list(m=length(Y),n=length(Y0_new),k1=ncol(X1),k2=ncol(X2),X1=X1,X2=X2,Y=Y,Y0=Y0,Y0_new=Y0_new,X1_new=X1_new,X2_new=X2_new,Y1_new=Y1_new)
-  fit<-rstan::sampling(object = m,data=dataset,iter=2000,warmup=200,
-                       chains=5,thin=1,control = list(adapt_delta = 0.95, max_treedepth = 12))
+  fit<-rstan::sampling(object = m,data=dataset,iter=300,warmup=150,
+                       chains=5,thin=1,control = list(adapt_delta = 0.99, max_treedepth = 20))
   saveRDS(fit, file = outputpath)
   #tp<-traceplot(fit,pars="alpha")
   return(fit)
