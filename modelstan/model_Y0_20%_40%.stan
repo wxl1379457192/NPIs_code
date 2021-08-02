@@ -10,7 +10,9 @@ data{
 parameters{
   real<lower=0> alpha_hier[k1];
   real<lower=0> beta_hier[k2];
+  real<lower=0> uni[k1+k2]; // real priors
   real<lower=0> sigma;
+  real<lower=0> sigma0;
 }
 transformed parameters {
   vector[k1] alpha;
@@ -19,10 +21,10 @@ transformed parameters {
 
   {
     for(i in 1:k1){
-      alpha[i] = alpha_hier[i] - log(1.000382)/7;
+      alpha[i] = alpha_hier[i] - log(1.000382)/7+ uni[i];
     }
     for(i in 1:k2){
-      beta[i] = beta_hier[i] - log(1.0075)/5;
+      beta[i] = beta_hier[i] - log(1.0075)/5+ uni[k1+i];
     }
     Y_mu = -(X1*alpha+X2*beta);
   }
@@ -31,6 +33,7 @@ transformed parameters {
 model{
   alpha_hier ~ gamma(.1667,1);
   beta_hier ~ gamma(.1667,1);
+  uni ~ normal(0,sigma0);
   for(i in 1:m){
     (1/Y[i]) ~ gamma(1/(exp(Y_mu[i])*Y0[i]),sigma);
   }
